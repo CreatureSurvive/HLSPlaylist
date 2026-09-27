@@ -1,5 +1,11 @@
 # HLSPlaylist
 
+[![CI](https://github.com/CreatureSurvive/HLSPlaylist/actions/workflows/ci.yml/badge.svg)](https://github.com/CreatureSurvive/HLSPlaylist/actions/workflows/ci.yml)
+[![Swift 6.0+](https://img.shields.io/badge/Swift-6.0+-F05138?logo=swift&logoColor=white)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20macOS%20%7C%20tvOS%20%7C%20watchOS%20%7C%20visionOS-blue)](#requirements)
+[![Swift Package Manager](https://img.shields.io/badge/SwiftPM-compatible-brightgreen)](#installation)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+
 A fast, lossless, pure-Swift parser and writer for HTTP Live Streaming (`.m3u8`) playlists.
 
 HLSPlaylist covers the full tag set of RFC 8216 and its successor
@@ -59,11 +65,31 @@ only, no LL-HLS), or Objective-C.
 
 ## Installation
 
+Add HLSPlaylist to your `Package.swift`:
+
 ```swift
-.package(url: "https://github.com/CreatureSurvive/HLSPlaylist.git", from: "1.0.0")
+dependencies: [
+    .package(url: "https://github.com/CreatureSurvive/HLSPlaylist.git", from: "1.0.0"),
+],
+targets: [
+    .target(name: "MyApp", dependencies: ["HLSPlaylist"]),
+]
 ```
 
-Requires iOS 15, macOS 12, tvOS 15, watchOS 8 or visionOS 1, and Swift 6.
+Or in Xcode, choose **File › Add Package Dependencies…** and enter
+`https://github.com/CreatureSurvive/HLSPlaylist`.
+
+### Requirements
+
+| Platform | Minimum |
+| --- | --- |
+| iOS | 15.0 |
+| macOS | 12.0 |
+| tvOS | 15.0 |
+| watchOS | 8.0 |
+| visionOS | 1.0 |
+
+Swift 6.0 (Xcode 16) or later, in Swift 6 language mode. No third-party dependencies.
 
 ## Usage
 
@@ -151,6 +177,15 @@ substitution, date edge cases, and a 20k-segment performance check.
 `HLS_LIVE_TESTS=1 swift test` also fetches, parses and round-trips every playlist in Apple's public
 example streams.
 
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md). Releases follow [Semantic Versioning](https://semver.org).
+
+## Contributing
+
+Issues and pull requests are welcome. Please run `swift test` before opening a pull request, and
+add tests for new behavior.
+
 ## License
 
-MIT
+Available under the MIT license. See [LICENSE](LICENSE) for details.
