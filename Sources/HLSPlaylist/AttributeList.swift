@@ -212,7 +212,11 @@ public struct Resolution: Sendable, Hashable, Comparable, CustomStringConvertibl
         self.init(width: width, height: height)
     }
 
-    public var pixelCount: Int { width * height }
+    /// `width × height`, saturating instead of overflowing on absurd values.
+    public var pixelCount: Int {
+        let (product, overflow) = width.multipliedReportingOverflow(by: height)
+        return overflow ? Int.max : product
+    }
     public var description: String { "\(width)x\(height)" }
 
     public static func < (lhs: Resolution, rhs: Resolution) -> Bool { lhs.pixelCount < rhs.pixelCount }

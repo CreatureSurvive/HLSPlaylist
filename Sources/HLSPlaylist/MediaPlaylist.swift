@@ -248,7 +248,7 @@ public struct MediaPlaylist: Sendable, Hashable {
     public var isLowLatency: Bool { partTarget != nil || segments.contains { !$0.parts.isEmpty } || !trailingParts.isEmpty }
 
     /// The media sequence number of the segment at `index`.
-    public func mediaSequence(ofSegmentAt index: Int) -> Int { mediaSequence + index }
+    public func mediaSequence(ofSegmentAt index: Int) -> Int { mediaSequence &+ index }
 
     /// Start time (seconds from the beginning of the playlist) of each segment.
     public var segmentStartTimes: [Double] {

@@ -330,6 +330,15 @@ struct ParsingBehaviorTests {
         }
     }
 
+    @Test func hostileNumbersDoNotTrap() throws {
+        let text = "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1,RESOLUTION=9999999999x9999999999\na.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=2,RESOLUTION=10x10\nb.m3u8\n"
+        let master = try #require(try Playlist(text).multivariant)
+        #expect(master.variants[0].resolution?.pixelCount == Int.max)
+        _ = master.preferredVariant()
+        let media = MediaPlaylist(targetDuration: 1, mediaSequence: Int.max)
+        _ = media.mediaSequence(ofSegmentAt: 5)
+    }
+
     @Test func classifiesCodecs() {
         #expect(CodecFamily(codec: "avc1.640028") == .h264)
         #expect(CodecFamily(codec: "hvc1.2.4.L153.B0") == .hevc)
@@ -352,5 +361,47 @@ struct ParsingBehaviorTests {
         let elapsed = try clock.measure { playlist = try Playlist(text).media }
         #expect(playlist?.segments.count == 20_000)
         #expect(elapsed < .seconds(5), "Parsing 20k segments took \(elapsed)")
+    }
+}
+
+@Suite("Fuzzing")
+struct FuzzTests {
+    /// Random mutations of valid playlists must never crash, and anything that
+    /// parses must re-render into something that parses again.
+    @Test(arguments: [0xC0FFEE, 1, 2, 3, 42] as [UInt64])
+    func survivesMutatedPlaylists(seed: UInt64) throws {
+        var generator = SeededGenerator(seed: seed)
+        let sources = [Fixtures.multivariant, Fixtures.encryptedVOD, Fixtures.lowLatency, Fixtures.liveWithDateRanges]
+        let fragments = ["#EXT-X-KEY:", "#EXTINF:", ",", "\"", "=", "#EXT-X-STREAM-INF:", "{$x}", "\n", "#EXT-X-DEFINE:NAME=\"x\"", "@", "0x", "-1", "999999999999999999999"]
+        for iteration in 0..<2000 {
+            var lines = sources[iteration % sources.count].components(separatedBy: "\n")
+            for _ in 0..<Int.random(in: 1...6, using: &generator) {
+                let index = Int.random(in: 0..<lines.count, using: &generator)
+                switch Int.random(in: 0..<4, using: &generator) {
+                case 0: lines.remove(at: index); if lines.isEmpty { lines = ["#EXTM3U"] }
+                case 1: lines.insert(fragments.randomElement(using: &generator)!, at: index)
+                case 2:
+                    var line = Array(lines[index])
+                    if !line.isEmpty { line.remove(at: Int.random(in: 0..<line.count, using: &generator)) }
+                    lines[index] = String(line)
+                default: lines[index] += fragments.randomElement(using: &generator)!
+                }
+            }
+            let text = lines.joined(separator: "\n")
+            guard let playlist = try? Playlist(text) else { continue }
+            _ = try Playlist(playlist.render())
+        }
+    }
+}
+
+struct SeededGenerator: RandomNumberGenerator {
+    private var state: UInt64
+    init(seed: UInt64) { state = seed }
+    mutating func next() -> UInt64 {
+        state &+= 0x9E3779B97F4A7C15
+        var z = state
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
     }
 }

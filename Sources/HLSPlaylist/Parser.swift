@@ -228,7 +228,7 @@ private struct ParserState {
             pendingInf = (duration, title?.isEmpty == true ? nil : title)
         case "#EXT-X-TARGETDURATION":
             isMedia = true
-            if let target = Int(value) ?? Double(value).map({ Int($0.rounded(.up)) }) {
+            if let target = Int(value) ?? Double(value).flatMap({ $0.isFinite ? Int(exactly: $0.rounded(.up)) : nil }) {
                 media.targetDuration = target
             } else {
                 try warn("Invalid EXT-X-TARGETDURATION", lineNumber)
