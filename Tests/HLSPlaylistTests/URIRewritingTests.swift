@@ -82,6 +82,37 @@ struct URIRewritingTests {
         #expect(playlist.mapURIs { _, _ in Issue.record("Unexpected URI"); return "" } == playlist)
     }
 
+    @Test func rewritesTrailingInterstitialDateRanges() throws {
+        let text = """
+        #EXTM3U
+        #EXT-X-TARGETDURATION:6
+        #EXTINF:6,
+        first.ts
+        #EXT-X-DATERANGE:ID="asset",CLASS="com.apple.hls.interstitial",START-DATE="2026-10-16T12:00:06Z",X-ASSET-URI="ads/asset.m3u8"
+        #EXT-X-DATERANGE:ID="list",CLASS="com.apple.hls.interstitial",START-DATE="2026-10-16T12:00:12Z",X-ASSET-LIST="ads/list.json"
+        """
+        let playlist = try #require(try Playlist(text).media)
+        #expect(playlist.trailingDateRanges.count == 2)
+        var roles: [URIRole] = []
+        let mapped = playlist.mapURIs { uri, role in
+            roles.append(role)
+            return "proxy://" + uri
+        }
+        #expect(roles == [.segment, .interstitialAsset, .interstitialAssetList])
+        #expect(mapped.trailingDateRanges[0].otherAttributes["X-ASSET-URI"] == .quoted("proxy://ads/asset.m3u8"))
+        #expect(mapped.trailingDateRanges[1].otherAttributes["X-ASSET-LIST"] == .quoted("proxy://ads/list.json"))
+        #expect(playlist.trailingDateRanges[0].otherAttributes["X-ASSET-URI"] == .quoted("ads/asset.m3u8"))
+        #expect(try Playlist(mapped.render()).media == mapped)
+        let resolved = playlist.resolvingURIs(against: URL(string: "https://example.com/live/index.m3u8")!)
+        #expect(resolved.trailingDateRanges[1].otherAttributes["X-ASSET-LIST"] == .quoted("https://example.com/live/ads/list.json"))
+        #expect(throws: TransformError.rejected) {
+            try playlist.mapURIs { uri, role in
+                if role == .interstitialAssetList { throw TransformError.rejected }
+                return uri
+            }
+        }
+    }
+
     private enum TransformError: Error { case rejected }
 
     @Test(arguments: [URIRole.contentSteering, .interstitialAsset, .interstitialAssetList])

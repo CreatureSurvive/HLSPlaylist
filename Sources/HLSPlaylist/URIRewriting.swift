@@ -78,6 +78,20 @@ extension MediaPlaylist {
                 return part
             }
         }
+        func mapDateRanges(_ ranges: [DateRange]) throws -> [DateRange] {
+            try ranges.map { range in
+                var range = range
+                if range.classIdentifier == "com.apple.hls.interstitial" {
+                    if let uri = range.otherAttributes["X-ASSET-URI"]?.rawValue {
+                        range.otherAttributes["X-ASSET-URI"] = .quoted(try transform(uri, .interstitialAsset))
+                    }
+                    if let uri = range.otherAttributes["X-ASSET-LIST"]?.rawValue {
+                        range.otherAttributes["X-ASSET-LIST"] = .quoted(try transform(uri, .interstitialAssetList))
+                    }
+                }
+                return range
+            }
+        }
 
         for index in copy.segments.indices {
             var segment = copy.segments[index]
@@ -85,17 +99,11 @@ extension MediaPlaylist {
             segment.keys = try segment.keys.map(mapKey)
             segment.map = try segment.map.map(mapMap)
             segment.parts = try mapParts(segment.parts)
-            for rangeIndex in segment.dateRanges.indices where segment.dateRanges[rangeIndex].classIdentifier == "com.apple.hls.interstitial" {
-                if let uri = segment.dateRanges[rangeIndex].otherAttributes["X-ASSET-URI"]?.rawValue {
-                    segment.dateRanges[rangeIndex].otherAttributes["X-ASSET-URI"] = .quoted(try transform(uri, .interstitialAsset))
-                }
-                if let uri = segment.dateRanges[rangeIndex].otherAttributes["X-ASSET-LIST"]?.rawValue {
-                    segment.dateRanges[rangeIndex].otherAttributes["X-ASSET-LIST"] = .quoted(try transform(uri, .interstitialAssetList))
-                }
-            }
+            segment.dateRanges = try mapDateRanges(segment.dateRanges)
             copy.segments[index] = segment
         }
         copy.trailingParts = try mapParts(copy.trailingParts)
+        copy.trailingDateRanges = try mapDateRanges(copy.trailingDateRanges)
         for index in copy.preloadHints.indices {
             copy.preloadHints[index].uri = try transform(copy.preloadHints[index].uri, .preloadHint)
         }
